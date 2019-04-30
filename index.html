@@ -1,0 +1,298 @@
+<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8">
+      <title>3BYTE</title>
+      <style type="text/css">
+        body
+        {
+          background-color: black;
+          color: white;
+          font-size: 200%;
+        }
+        .english {
+          color: gray;
+        }
+      </style>
+    </head>
+
+    <body>      
+      
+    </body>
+    <script>
+/*
+Zugabeliste:
+- Spieltick
+- enter die animationen zu skippen
+- Ende
+
+Zustände
+  "Eingabe","11"//Eingabezeichenfolge
+  "Rechner","3"//Cursorpos
+  "Füllung"
+*/
+  var delta=100;
+  var wartet=false;
+  var Kontingent=0;
+  var Verloren=false;
+
+  var letterNumber = /^[0-9a-zA-Z]+$/;
+
+      var buchstaben="ABC*EFG*JKL*NOP*STV*";
+        var Länge = 24;
+        var ErsetzPosition=-1;
+
+        var Zustand ={
+          Abkürzungen:[
+                        
+                        ],
+        }
+
+        function FüllungTick(){
+          if (Zustand.Zeichenfolge.length<Länge){
+            if (Math.random() >= 0.5){
+              Zustand.Zeichenfolge+="1";
+            } else {
+              Zustand.Zeichenfolge+="0";
+            }  
+          }
+
+
+          if (Zustand.Zeichenfolge.length==Länge){
+            if (Zustand.Abkürzungen.length===0){
+              wartet=false;
+            } else {
+              ErsetzPosition=0;
+              setTimeout(ErsetzTick,delta);
+            }
+          } else {
+              setTimeout(FüllungTick,delta);
+          }
+          stellZustanddar();
+        }
+
+        function bastelZustand(){
+          Zustand = {};
+          Zustand.Abkürzungen = [
+                        // ["101","A"],
+                        // ["A01","B"],
+                        // ["1AA","C"],
+                        // ["1B1","D"],
+                        // ["10C","E"],
+                        // ["CEA","F"]
+                        ];
+          Zustand.Zeichenfolge = ""
+          Zustand.Eingabe="";
+          Zustand.Modus="Füllung"
+          setTimeout(FüllungTick,delta);
+          wartet=true;
+        }
+        
+        function getHighScore(){
+          try {
+            var storagedHighScore = localStorage.getItem("3bytehighscore");
+            highscore=0;
+            if (storagedHighScore!=null){
+              highscore=parseInt(storagedHighScore);
+            }
+          } catch(e){
+            highscore=0;
+          }
+          return highscore;
+        }
+
+        var highscore=0;
+        getHighScore();
+        
+        function setHighScore(){
+          try {
+            var hs = getHighScore();
+            if (hs<Zustand.Abkürzungen.length){
+              localStorage.setItem("3bytehighscore",Zustand.Abkürzungen.length);
+              highscore=Zustand.Abkürzungen.length;
+            }
+          } catch(e){
+
+          }
+        }
+
+        function setMaxScore(){
+          try {
+            var hs = getHighScore();
+            localStorage.setItem("3bytehighscore",1000000);            
+          } catch(e){
+
+          }
+        }
+        function GameWon(){
+          return Zustand.Abkürzungen.length==buchstaben.length;          
+        }
+
+        function stellZustanddar(){
+          var s = "";
+          if (getHighScore()>0){
+            s+=`Highscore: ${getHighScore()}\n\n`;
+          }
+          s+=`==========================\n`;
+          s+=`    3BYTEENKODER V1,10    \n`;
+          s+=`==========================\n`;
+          s+=`\n`
+
+          if (Zustand.Abkürzungen.length>0){
+            s+=`Abkürzungen <span class="english">(Abbreviations)</span>:\n`;
+            for (var i=0;i<Zustand.Abkürzungen.length;i+=4) {
+              var Zeile = "   ";
+              for (var j=i;j<Math.min(Zustand.Abkürzungen.length,i+4);j++){
+                var kvp = Zustand.Abkürzungen[j];
+                Zeile+=`   ${kvp[1]}=${kvp[0]}`;
+              }
+              s+=Zeile+`\n`;
+            }
+            s+=`\n`;
+          } else {
+            s+=`Abkürzungen <span class="english">(Abbreviations)</span>:\n`;
+            s+=`\n\n`
+          }
+
+          s+=`Datenstrom <span class="english">(Data Stream)</span>:\n`;
+          var zeichenfolge = Zustand.Zeichenfolge;
+          if (ErsetzPosition>=0){
+            zeichenfolge = `${zeichenfolge.substring(0,ErsetzPosition)}<u>${zeichenfolge.substring(ErsetzPosition,ErsetzPosition+3)}</u>${zeichenfolge.substring(ErsetzPosition+3)}`
+          }
+          s+=`      ${zeichenfolge}\n`;
+          if (Verloren){
+            s+=`\n`
+            s+=`Kontingent nicht erfüllt <span class="english">(Quota not fulfilled)</span>. \n`;
+            s+=`Spiel beendet <span class="english">(Game Over)</span>.\n`
+            s+=`Punkte <span class="english">(Points)</span>: ${Zustand.Abkürzungen.length}\n`;
+            setHighScore();
+
+          } else if (wartet===false){
+            if (GameWon()){
+              s+=`\n`;
+              s+=`Weiß gar nicht, wie du das schaffen könntest,\naber du hast es geschafft.\nHerzlichen Glückwunsch!\n\n`;
+              setMaxScore();
+            s+=`Punkte <span class="english">(Points)</span>: ${1000000}\n`;
+            } else {
+              s+=`\n`;
+              s+=`Ersetzungsregel <span class="english">(Replacement Rule)</span>:\n`;
+              s+=`      ${buchstaben.charAt(Zustand.Abkürzungen.length)} = ${Zustand.Eingabe}`;
+              if (Zustand.Eingabe.length<3){
+                s+="_";
+                for (var i=Zustand.Eingabe.length+1;i<3;i++){
+                  s+="·";
+                }
+              } else {
+                s+="↵";
+              }
+              s+="\n\n";
+            }
+          } else if (Zustand.Abkürzungen.length>0){
+            s+=`\nKontingent <span class="english">(Quota)</span> : ${Kontingent}/2\n\n\n`;
+          } else {
+            s+=`\n\n\n\n`
+          }
+
+          s+=`\n[Z = Zurücksetzen <span class="english">(Restart)</span>]\n`;
+
+          document.body.innerHTML=`<pre>${s}</pre>`;
+        }
+
+        function ErsetzTick(){
+          var pos = ErsetzPosition;
+          if (pos+2<Zustand.Zeichenfolge.length){
+            var ss = Zustand.Zeichenfolge.substring(pos,pos+3);
+            for (var i=0;i<Zustand.Abkürzungen.length;i++){
+              var regel = Zustand.Abkürzungen[i];
+              if (regel[0]===ss){
+                console.log(`vor : ${Zustand.Zeichenfolge}`);
+                console.log(`${Zustand.Zeichenfolge.substring(pos,pos+3)} mit ${regel[1]} ersetzt.`);
+                if (regel[1]==="*"){
+                  Zustand.Zeichenfolge = Zustand.Zeichenfolge.substring(0,pos) + Zustand.Zeichenfolge.substring(pos+3);
+                } else {
+                  Zustand.Zeichenfolge = Zustand.Zeichenfolge.substring(0,pos) + regel[1]+Zustand.Zeichenfolge.substring(pos+3);                  
+                }
+                if (Kontingent<2 && i===Zustand.Abkürzungen.length-1){
+                  Kontingent++;
+                }
+                console.log(`nach: ${Zustand.Zeichenfolge}`);
+                pos--;
+              }
+            }
+          }
+
+          if (pos<Zustand.Zeichenfolge.length-3){
+            pos++;            
+            ErsetzPosition=pos;
+            setTimeout(ErsetzTick,delta);
+          } else if (Zustand.Zeichenfolge.length<Länge){  
+            ErsetzPosition=-1;            
+            setTimeout(FüllungTick,delta);
+          } else {            
+            // var neue_zf = Zustand.Zeichenfolge.split("").sort().reverse().join("");
+            // if (Zustand.Abkürzungen.length%4===0 && neue_zf!==Zustand.Zeichenfolge){
+            //   Zustand.Zeichenfolge=neue_zf;
+            //   ErsetzPosition=0;
+            //   setTimeout(ErsetzTick,delta);
+            // } else
+             {
+              ErsetzPosition=-1;
+              wartet=false;
+              if (Kontingent<2){
+                Verloren=true;
+              }
+            }
+          }
+
+          stellZustanddar();
+        }
+        function verarbeiteEingaben(event){
+          if (event.ctrlKey || event.metaKey){
+            return true;
+          }
+          if (event.key==="z"){
+            location.reload();           
+          }
+
+          if (wartet||GameWon()){
+            return;
+          }
+          if (event.key==="Backspace"||event.key==="Delete"){
+            if (Zustand.Eingabe.length>0){
+              Zustand.Eingabe = Zustand.Eingabe.substring(0,Zustand.Eingabe.length-1);
+            }
+            event.preventDefault();
+          } else if (event.key=="Enter"){
+            //Eingabe
+            if (Zustand.Eingabe.length===3){
+              var w = buchstaben.charAt(Zustand.Abkürzungen.length);
+              var k = Zustand.Eingabe;
+              Zustand.Abkürzungen.push([k,w]);
+              if (getHighScore()>0){
+                setHighScore();
+              }
+              Zustand.Eingabe="";
+
+              ErsetzPosition=0;
+              wartet=true;
+              Kontingent=0;
+              setTimeout(ErsetzTick,delta);
+
+            }
+            event.preventDefault();
+          } else if( event.key.length==1 && event.key.match(letterNumber)) {
+            if (Zustand.Eingabe.length<3){
+              Zustand.Eingabe+=event.key.toUpperCase();
+            }
+            event.preventDefault();
+          }
+          stellZustanddar();
+        }
+
+        document.addEventListener("keydown", event => { verarbeiteEingaben(event) });
+
+        bastelZustand();
+        stellZustanddar();
+
+      </script>
+  </html>
